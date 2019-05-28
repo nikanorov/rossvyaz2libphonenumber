@@ -5,38 +5,29 @@ repositories {
     mavenCentral()
 }
 
+final def os = org.gradle.internal.os.OperatingSystem.current()
 
 kotlin {
-    // For ARM, should be changed to iosArm32 or iosArm64
-    // For Linux, should be changed to e.g. linuxX64
-    // For MacOS, should be changed to e.g. macosX64
-    // For Windows, should be changed to e.g. mingwX64
-    mingwX64("mingw") {
-        compilations.main {
-            // Comment to generate Kotlin/Native library (KLIB) instead of executable file:
-            outputKinds("executable")
-            // Change to specify fully qualified name of your application's entry point:
-            entryPoint 'rossvyaz2libphonenumber.main'
-
-        }
-        
-    }
-   
-    sourceSets {
-        // Note: To enable common source sets please comment out 'kotlin.import.noCommonSourceSets' property
-        // in gradle.properties file and re-import your project in IDE.
-        mingwMain {
+       final def nativePreset = os.isWindows() ? presets.mingwX64
+                           : os.isLinux()   ? presets.linuxX64
+                           : os.isMacOsX()  ? presets.macosX64
+                           : /*unknown host*/ null
+    targets {
+        fromPreset(nativePreset, 'native') {
+            compilations.main {
+                outputKinds 'EXECUTABLE'
+                entryPoint 'rossvyaz2libphonenumber.main'
+            }
         }
     }
-
 }
 
 
 task runProgram {
     def buildType = 'RELEASE' // Change to 'DEBUG' to run application with debug symbols.
-    dependsOn kotlin.targets.mingw.compilations.main.linkTaskName('EXECUTABLE', buildType)
+    dependsOn kotlin.targets.native.compilations.main.linkTaskName('EXECUTABLE', buildType)
     doLast {
-        def programFile = kotlin.targets.mingw.compilations.main.getBinary('EXECUTABLE', buildType)
+        def programFile = kotlin.targets.native.compilations.main.getBinary('EXECUTABLE', buildType)
         exec {
             executable programFile
             args ''
